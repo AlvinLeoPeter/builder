@@ -70,6 +70,7 @@ def home():
     <body>
         <h1>🧠 AI Code Explainer</h1>
         <p style="color: #888;">Paste your code and get a simple explanation instantly.</p>
+        <a href="/history" style="color: #61dafb; font-size: 14px;">📚 View History</a>
         <form id="codeForm">
             <textarea name="code" id="codeInput" placeholder="Paste your code here..."></textarea>
             <br>
