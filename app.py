@@ -1,3 +1,4 @@
+from database import init_db, save_explanation, get_history
 from flask import Flask, request
 import anthropic
 from dotenv import load_dotenv
@@ -7,6 +8,7 @@ import markdown
 load_dotenv()
 
 app = Flask(__name__)
+init_db()
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 @app.route("/")
@@ -116,6 +118,56 @@ def explain():
     
     explanation_md = message.content[0].text
     explanation_html = markdown.markdown(explanation_md, extensions=['fenced_code'])
+    save_explanation(user_input, explanation_md)
     return explanation_html
+
+@app.route("/history")
+def history():
+    records = get_history()
+    html = """
+    <html>
+    <head>
+        <style>
+            body { background-color: #1e1e1e; color: #fff; 
+                   font-family: Arial; padding: 20px; }
+            .entry { background: #2d2d2d; border-radius: 8px; 
+                     padding: 15px; margin-bottom: 15px; }
+            .timestamp { color: #888; font-size: 12px; }
+            .code { background: #111; padding: 10px; 
+                    border-radius: 5px; margin: 10px 0; }
+            a { color: #61dafb; }
+        </style>
+    </head>
+    <body>
+        <h1>📚 Explanation History</h1>
+        <a href="/">← Back to Explainer</a>
+        <br><br>
+    """
+    for record in records:
+        html += f"""
+        <div class="entry">
+            <div class="timestamp">🕐 {record[3]}</div>
+            <div class="code"><pre>{record[1]}</pre></div>
+            <p id="preview-{record[0]}">{markdown.markdown(record[2][:200], extensions=['fenced_code'])}... 
+    <button onclick="document.getElementById('full-{record[0]}').style.display='block';
+                 document.getElementById('preview-{record[0]}').style.display='none';" 
+        style="background:#61dafb;border:none;padding:5px 10px;border-radius:5px;
+               cursor:pointer;color:#1e1e1e;font-weight:bold;">
+    Show More
+    </button>
+</p>
+<div id="full-{record[0]}" style="display:none;">
+    {markdown.markdown(record[2], extensions=['fenced_code'])}
+    <button onclick="document.getElementById('full-{record[0]}').style.display='none';
+                     document.getElementById('preview-{record[0]}').style.display='block';"
+            style="background:#444;border:none;padding:5px 10px;border-radius:5px;
+                   cursor:pointer;color:#fff;font-weight:bold;margin-top:10px;">
+        Show Less
+    </button>
+</div>
+        </div>
+        """
+    html += "</body></html>"
+    return html
 
 app.run(debug=True, port=8080)
