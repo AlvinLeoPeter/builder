@@ -2,6 +2,7 @@ from flask import Flask, request
 import anthropic
 from dotenv import load_dotenv
 import os
+import markdown
 
 load_dotenv()
 
@@ -15,6 +16,8 @@ def home():
     <html>
     <head>
         <title>AI Code Explainer</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
         <style>
             body {
                 background-color: #1e1e1e;
@@ -88,7 +91,10 @@ def home():
                     body: 'code=' + encodeURIComponent(code)
                 });
                 const text = await response.text();
-                explanation.textContent = text;
+                explanation.innerHTML = text;
+                document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+                });
             });
         </script>
     </body>
@@ -102,12 +108,14 @@ def explain():
     message = client.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=4096,
-        system="You are a coding assistant that gives simple and understandable explanations for each line of code given to you.",
+        system="You are a coding assistant that gives simple and understandable explanations for each line of code given to you. Only put actual code in code blocks. Never put URLs, brackets, or punctuation in code blocks.",
         messages=[
             {"role": "user", "content": user_input}
         ]
     )
     
-    return message.content[0].text
+    explanation_md = message.content[0].text
+    explanation_html = markdown.markdown(explanation_md, extensions=['fenced_code'])
+    return explanation_html
 
 app.run(debug=True, port=8080)
